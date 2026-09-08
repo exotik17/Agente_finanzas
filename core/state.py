@@ -45,8 +45,8 @@ def inicializar_estado() -> None:
 def actualizar_perfil(texto: str) -> None:
     """Actualiza los datos financieros del usuario identificados en un texto.
 
-    Analiza el contenido recibido para detectar el ingreso mensual y la
-    meta de ahorro mencionados por el usuario.
+    Analiza el contenido recibido para detectar el ingreso mensual, la
+    meta de ahorro y presupuestos por categoria mencionados por el usuario.
 
     Args:
         texto: Mensaje escrito por el usuario del cual se intentara
@@ -72,6 +72,16 @@ def actualizar_perfil(texto: str) -> None:
             st.session_state.perfil["meta_ahorro_porcentaje"] = float(
                 coincidencia_meta.group(1)
             )
+        except ValueError:
+            pass
+
+    # Detecta presupuesto: "presupuesto vivienda 500000", "limite transporte 100000", "para ocio 50000"
+    patron_presupuesto = r"(?:presupuesto|limite|destinar|para)(?: de| en)?\s+(vivienda|alimentacion|transporte|ocio|otros)[^\d]*([\d.,]+)"
+    for coincidencia in re.finditer(patron_presupuesto, texto_lower):
+        categoria = coincidencia.group(1)
+        valor_str = coincidencia.group(2).replace(".", "").replace(",", "")
+        try:
+            st.session_state.perfil["presupuesto"][categoria] = float(valor_str)
         except ValueError:
             pass
 
