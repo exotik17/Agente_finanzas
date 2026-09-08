@@ -71,14 +71,29 @@ def actualizar_perfil(texto: str) -> None:
         except ValueError:
             pass
 
-    # Detecta meta de ahorro: "quiero ahorrar el 20%", "meta de ahorro 15%"
-    patron_meta = r"(?:ahorrar|meta de ahorro)[^\d]*(\d+)\s*%"
+    # Detecta meta de ahorro: "quiero ahorrar el 20%", "meta de ahorro 15%", "ahorrar 500 mil"
+    patron_meta = r"(?:ahorrar|meta de ahorro)[^\d]*([\d.,]+)(?:\s*(%)|\s*(millon|millones|millón|mil|miles))?"
     coincidencia_meta = re.search(patron_meta, texto_lower)
     if coincidencia_meta:
+        valor_str = coincidencia_meta.group(1).replace(".", "").replace(",", ".")
+        es_porcentaje = coincidencia_meta.group(2) == "%"
+        es_multiplicador = coincidencia_meta.group(3)
         try:
-            st.session_state.perfil["meta_ahorro_porcentaje"] = float(
-                coincidencia_meta.group(1)
-            )
+            valor = float(valor_str)
+            if es_porcentaje:
+                st.session_state.perfil["meta_ahorro_porcentaje"] = valor
+            else:
+                # Es un valor absoluto en dinero
+                if es_multiplicador:
+                    if es_multiplicador in ["millon", "millones", "millón"]:
+                        valor *= 1000000
+                    elif es_multiplicador in ["mil", "miles"]:
+                        valor *= 1000
+                
+                # Convertir a porcentaje basado en el ingreso actual
+                ingreso = st.session_state.perfil.get("ingreso_mensual", 0)
+                if ingreso > 0:
+                    st.session_state.perfil["meta_ahorro_porcentaje"] = (valor / ingreso) * 100
         except ValueError:
             pass
 
