@@ -3,17 +3,6 @@
 Este modulo configura y ejecuta la interfaz web del asistente financiero.
 Gestiona la visualizacion del perfil del usuario, el historial de
 conversacion y la interaccion entre el usuario y el agente basado en Gemini.
-
-El flujo principal de la aplicacion incluye:
-
-- Validacion de la configuracion requerida.
-- Inicializacion del estado de sesion.
-- Visualizacion del perfil financiero del usuario en el sidebar.
-- Renderizado del historial de conversacion.
-- Captura de nuevos mensajes del usuario.
-- Actualizacion del perfil y la memoria conversacional.
-- Generacion de respuestas mediante el agente financiero.
-- Reinicio de la conversacion cuando el usuario lo solicita.
 """
 
 import streamlit as st
@@ -31,7 +20,7 @@ from core.state import (
 
 st.set_page_config(
     page_title="Agente Financiero",
-    page_icon="💰",
+    page_icon="??",
 )
 
 
@@ -58,18 +47,25 @@ with st.sidebar:
     st.subheader("Mi perfil financiero")
 
     perfil = st.session_state.perfil
+    transacciones = st.session_state.transacciones
 
     ingreso = perfil["ingreso_mensual"]
     meta_pct = perfil["meta_ahorro_porcentaje"]
     meta_monto = ingreso * meta_pct / 100
 
     st.metric("Ingreso mensual", f"${ingreso:,.0f}")
-    st.metric("Meta de ahorro", f"${meta_monto:,.0f} ({meta_pct}%)")
+    st.metric("Meta de ahorro", f"${meta_monto:,.0f} ({meta_pct:,.1f}%)")
 
     st.divider()
     st.caption("Presupuesto por categoria")
     for categoria, limite in perfil["presupuesto"].items():
         st.write(f"**{categoria.capitalize()}:** ${limite:,.0f}")
+
+    if transacciones:
+        st.divider()
+        st.caption("Gastos registrados en esta sesion")
+        for t in transacciones:
+            st.write(f"- {t['categoria'].capitalize()}: ${t['monto']:,.0f}")
 
     st.divider()
 
