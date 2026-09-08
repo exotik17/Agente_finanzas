@@ -21,6 +21,9 @@ def calcular_balance(
     Returns:
         Diccionario con totales, balance actual y comparacion con la meta de ahorro.
     """
+    if isinstance(transacciones, dict):
+        transacciones = transacciones.get("transacciones", [])
+
     total_ingresos = sum(
         t["monto"] for t in transacciones if t["tipo"] == "ingreso"
     )
