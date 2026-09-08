@@ -1,0 +1,11 @@
+{
+  "ingreso_mensual": 1800000,
+  "meta_ahorro_porcentaje": 20,
+  "presupuesto": {
+    "vivienda": 650000,
+    "alimentacion": 300000,
+    "transporte": 100000,
+    "ocio": 150000,
+    "otros": 100000
+  }
+}
