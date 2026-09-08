@@ -54,16 +54,19 @@ def actualizar_perfil(texto: str) -> None:
     """
     texto_lower = texto.lower()
 
-    # Detecta ingreso: "gano 2000000", "mi ingreso es 1.5 millones", "recibo 5 millones"
-    patron_ingreso = r"(?:gano|ingreso|recibo|salario de|sueldo de)\s+\$?\s*([\d.,]+)(?:\s*(millon|millones|millón))?"
+    # Detecta ingreso: "gano 2000000", "mi ingreso es 1.5 millones", "recibo 500 mil"
+    patron_ingreso = r"(?:gano|ingreso|recibo|salario de|sueldo de)\s+\$?\s*([\d.,]+)(?:\s*(millon|millones|millón|mil|miles))?"
     coincidencia = re.search(patron_ingreso, texto_lower)
     if coincidencia:
         valor_str = coincidencia.group(1).replace(".", "").replace(",", ".")
-        es_millon = coincidencia.group(2)
+        es_multiplicador = coincidencia.group(2)
         try:
             valor = float(valor_str)
-            if es_millon:
-                valor *= 1000000
+            if es_multiplicador:
+                if es_multiplicador in ["millon", "millones", "millón"]:
+                    valor *= 1000000
+                elif es_multiplicador in ["mil", "miles"]:
+                    valor *= 1000
             st.session_state.perfil["ingreso_mensual"] = valor
         except ValueError:
             pass
@@ -79,16 +82,19 @@ def actualizar_perfil(texto: str) -> None:
         except ValueError:
             pass
 
-    # Detecta presupuesto: "presupuesto vivienda 500000", "limite transporte 1 millon", "para ocio 50000"
-    patron_presupuesto = r"(?:presupuesto|limite|destinar|para)(?: de| en)?\s+(vivienda|alimentacion|transporte|ocio|otros)[^\d]*([\d.,]+)(?:\s*(millon|millones|millón))?"
+    # Detecta presupuesto: "presupuesto vivienda 500000", "limite transporte 1 millon", "para ocio 50 mil"
+    patron_presupuesto = r"(?:presupuesto|limite|destinar|para)(?: de| en)?\s+(vivienda|alimentacion|transporte|ocio|otros)[^\d]*([\d.,]+)(?:\s*(millon|millones|millón|mil|miles))?"
     for coincidencia in re.finditer(patron_presupuesto, texto_lower):
         categoria = coincidencia.group(1)
         valor_str = coincidencia.group(2).replace(".", "").replace(",", ".")
-        es_millon = coincidencia.group(3)
+        es_multiplicador = coincidencia.group(3)
         try:
             valor = float(valor_str)
-            if es_millon:
-                valor *= 1000000
+            if es_multiplicador:
+                if es_multiplicador in ["millon", "millones", "millón"]:
+                    valor *= 1000000
+                elif es_multiplicador in ["mil", "miles"]:
+                    valor *= 1000
             st.session_state.perfil["presupuesto"][categoria] = valor
         except ValueError:
             pass
