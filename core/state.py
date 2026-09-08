@@ -54,13 +54,17 @@ def actualizar_perfil(texto: str) -> None:
     """
     texto_lower = texto.lower()
 
-    # Detecta ingreso: "gano 2000000", "mi ingreso es 1500000", "recibo 1800000"
-    patron_ingreso = r"(?:gano|ingreso|recibo|salario de|sueldo de)\s+\$?\s*([\d.,]+)"
+    # Detecta ingreso: "gano 2000000", "mi ingreso es 1.5 millones", "recibo 5 millones"
+    patron_ingreso = r"(?:gano|ingreso|recibo|salario de|sueldo de)\s+\$?\s*([\d.,]+)(?:\s*(millon|millones|millón))?"
     coincidencia = re.search(patron_ingreso, texto_lower)
     if coincidencia:
-        valor_str = coincidencia.group(1).replace(".", "").replace(",", "")
+        valor_str = coincidencia.group(1).replace(".", "").replace(",", ".")
+        es_millon = coincidencia.group(2)
         try:
-            st.session_state.perfil["ingreso_mensual"] = float(valor_str)
+            valor = float(valor_str)
+            if es_millon:
+                valor *= 1000000
+            st.session_state.perfil["ingreso_mensual"] = valor
         except ValueError:
             pass
 
@@ -75,13 +79,17 @@ def actualizar_perfil(texto: str) -> None:
         except ValueError:
             pass
 
-    # Detecta presupuesto: "presupuesto vivienda 500000", "limite transporte 100000", "para ocio 50000"
-    patron_presupuesto = r"(?:presupuesto|limite|destinar|para)(?: de| en)?\s+(vivienda|alimentacion|transporte|ocio|otros)[^\d]*([\d.,]+)"
+    # Detecta presupuesto: "presupuesto vivienda 500000", "limite transporte 1 millon", "para ocio 50000"
+    patron_presupuesto = r"(?:presupuesto|limite|destinar|para)(?: de| en)?\s+(vivienda|alimentacion|transporte|ocio|otros)[^\d]*([\d.,]+)(?:\s*(millon|millones|millón))?"
     for coincidencia in re.finditer(patron_presupuesto, texto_lower):
         categoria = coincidencia.group(1)
-        valor_str = coincidencia.group(2).replace(".", "").replace(",", "")
+        valor_str = coincidencia.group(2).replace(".", "").replace(",", ".")
+        es_millon = coincidencia.group(3)
         try:
-            st.session_state.perfil["presupuesto"][categoria] = float(valor_str)
+            valor = float(valor_str)
+            if es_millon:
+                valor *= 1000000
+            st.session_state.perfil["presupuesto"][categoria] = valor
         except ValueError:
             pass
 
