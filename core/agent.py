@@ -16,8 +16,10 @@ from google import genai
 from google.genai import types
 
 from config.settings import GEMINI_API_KEY, GEMINI_MODEL
+from tools.ahorro_metas_tool import calcular_fondo_emergencia, proyectar_meta_ahorro
 from tools.calculos_tool import calcular_balance, evaluar_deuda
 from tools.transacciones_tool import consultar_transacciones
+
 
 
 class Perfil(TypedDict):
@@ -67,6 +69,8 @@ HERRAMIENTAS DISPONIBLES:
 - consultar_transacciones: usa cuando el usuario pregunte por sus gastos, historial o transacciones.
 - calcular_balance: usa cuando el usuario pregunte por su balance, cuanto ha gastado o cuanto puede ahorrar.
 - evaluar_deuda: usa cuando el usuario mencione creditos, deudas, cuotas o prestamos.
+- proyectar_meta_ahorro: usa cuando el usuario pregunte cuanto tiempo le tomara ahorrar un monto, proyecciones de ahorro o interes/rendimiento acumulado.
+- calcular_fondo_emergencia: usa cuando el usuario pregunte sobre su fondo de emergencia, colchon financiero o meses de cobertura.
 
 FLUJO DE DECISION (siguelo siempre):
 1. Si el usuario pregunta sobre INVERSIONES (acciones, criptomonedas, fondos, bolsa):
@@ -84,7 +88,13 @@ FLUJO DE DECISION (siguelo siempre):
    Usa calcular_balance y compara contra el presupuesto de la categoria.
    Si un gasto supera el limite de su categoria, genera una alerta clara.
 
-5. Siempre termina mostrando visibilidad: balance actual, meta de ahorro, observacion util.
+5. Si el usuario pregunta por METAS DE AHORRO o tiempos de ahorro:
+   Usa proyectar_meta_ahorro indicando meta, aporte mensual y si tiene saldo o rendimiento. Muestra los numeros calculados.
+
+6. Si el usuario consulta sobre su FONDO DE EMERGENCIA:
+   Usa calcular_fondo_emergencia basandote en sus gastos mensuales o presupuesto indispensable y los meses de cobertura solicitados.
+
+7. Siempre termina mostrando visibilidad: balance actual, meta de ahorro, observacion util.
 
 RESTRICCIONES:
 - No ejecutes pagos ni transacciones reales.
@@ -116,7 +126,13 @@ def responder(
         contents=mensaje_usuario,
         config=types.GenerateContentConfig(
             system_instruction=contexto,
-            tools=[consultar_transacciones, calcular_balance, evaluar_deuda],
+            tools=[
+                consultar_transacciones,
+                calcular_balance,
+                evaluar_deuda,
+                proyectar_meta_ahorro,
+                calcular_fondo_emergencia,
+            ],
         ),
     )
 
