@@ -8,6 +8,7 @@ de texto libre, construir una memoria reciente de la conversacion y
 reiniciar el estado de la sesion.
 """
 
+import datetime
 import json
 import re
 from pathlib import Path
@@ -43,6 +44,25 @@ def inicializar_estado() -> None:
 
     if "mensajes" not in st.session_state:
         st.session_state.mensajes = []
+
+    if "ultima_ejecucion" not in st.session_state:
+        st.session_state.ultima_ejecucion = None
+
+
+def registrar_ejecucion(cadena: str, duracion: float, exito: bool = True) -> None:
+    """Registra la traza de ejecucion para alimentar la interfaz grafica.
+
+    Args:
+        cadena: Nombre de la cadena o herramienta que se ejecuto.
+        duracion: Tiempo en segundos de la ejecucion.
+        exito: Booleano indicando si la operacion fue exitosa.
+    """
+    st.session_state.ultima_ejecucion = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "cadena": cadena,
+        "duracion": duracion,
+        "exito": exito
+    }
 
 
 def actualizar_perfil(texto: str) -> None:
@@ -177,3 +197,4 @@ def reiniciar_estado() -> None:
     st.session_state.mensajes = []
     st.session_state.transacciones = []
     st.session_state.perfil = _cargar_perfil_base()
+    st.session_state.ultima_ejecucion = None

@@ -7,5 +7,6 @@
     "transporte": 0,
     "ocio": 0,
     "otros": 0
-  }
+  },
+  "tolerancia_riesgo": "moderada"
 }

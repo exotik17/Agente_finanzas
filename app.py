@@ -68,6 +68,21 @@ with st.sidebar:
             st.write(f"- {t['categoria'].capitalize()}: ${t['monto']:,.0f}")
 
     st.divider()
+    st.subheader("Panel de Trazabilidad 🔍")
+    if st.session_state.ultima_ejecucion:
+        traza = st.session_state.ultima_ejecucion
+        estado_icon = "✅" if traza.get("exito", True) else "❌"
+        st.info(
+            f"**Última Ejecución:**\n\n"
+            f"🛠️ **Ruta/Cadena:** {traza.get('cadena')}\n\n"
+            f"⏱️ **Duración:** {traza.get('duracion'):.2f}s\n\n"
+            f"📊 **Estado:** {estado_icon}\n\n"
+            f"🕒 **Hora:** {traza.get('timestamp')}"
+        )
+    else:
+        st.caption("Aún no hay ejecuciones registradas en esta sesión.")
+
+    st.divider()
 
     if st.button("Reiniciar conversacion"):
         reiniciar_estado()
