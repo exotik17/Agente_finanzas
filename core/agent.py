@@ -11,14 +11,21 @@ en el system prompt, no en codigo Python separado.
 """
 
 from typing import TypedDict
+import time
 
-from google import genai
-from google.genai import types
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.agents import create_agent
+from langchain_core.tools import tool
 
 from config.settings import GEMINI_API_KEY, GEMINI_MODEL
 from tools.ahorro_metas_tool import calcular_fondo_emergencia, proyectar_meta_ahorro
 from tools.calculos_tool import calcular_balance, evaluar_deuda
 from tools.transacciones_tool import consultar_transacciones
+from prompts.academic_prompt import SYSTEM_PROMPT
+from chains.router import clasificar_consulta
+from chains.response import generar_respuesta_simple
+from chains.prioritization_chain import priorizar_situacion
+from core.state import registrar_ejecucion
 
 
 
@@ -30,8 +37,7 @@ class Perfil(TypedDict):
     presupuesto: dict
 
 
-# Cliente utilizado para realizar solicitudes a la API de Gemini.
-client = genai.Client(api_key=GEMINI_API_KEY)
+    presupuesto: dict
 
 
 def construir_contexto(perfil: Perfil, memoria: str) -> str:
@@ -53,87 +59,65 @@ def construir_contexto(perfil: Perfil, memoria: str) -> str:
         f"  - {cat}: ${monto:,.0f}" for cat, monto in presupuesto.items()
     )
 
-    return f"""
-Eres un asistente financiero personal. Ayudas al usuario a entender y mejorar sus finanzas.
-
-PERFIL DEL USUARIO:
-- Ingreso mensual: ${perfil["ingreso_mensual"]:,.0f}
-- Meta de ahorro: {perfil["meta_ahorro_porcentaje"]}% del ingreso (${perfil["ingreso_mensual"] * perfil["meta_ahorro_porcentaje"] / 100:,.0f}/mes)
-- Presupuesto por categoria:
-{categorias_texto}
-
-MEMORIA RECIENTE:
-{memoria}
-
-HERRAMIENTAS DISPONIBLES:
-- consultar_transacciones: usa cuando el usuario pregunte por sus gastos, historial o transacciones.
-- calcular_balance: usa cuando el usuario pregunte por su balance, cuanto ha gastado o cuanto puede ahorrar.
-- evaluar_deuda: usa cuando el usuario mencione creditos, deudas, cuotas o prestamos.
-- proyectar_meta_ahorro: usa cuando el usuario pregunte cuanto tiempo le tomara ahorrar un monto, proyecciones de ahorro o interes/rendimiento acumulado.
-- calcular_fondo_emergencia: usa cuando el usuario pregunte sobre su fondo de emergencia, colchon financiero o meses de cobertura.
-
-FLUJO DE DECISION (siguelo siempre):
-1. Si el usuario pregunta sobre INVERSIONES (acciones, criptomonedas, fondos, bolsa):
-   Informa que ese tema requiere asesoria especializada. No opines sobre si es buena o mala idea.
-
-2. Si el usuario menciona una DEUDA o credito:
-   Usa evaluar_deuda para calcular cuota, total a pagar, intereses y % del ingreso comprometido.
-   Si alerta_compromiso_alto es True, advierte que supera el 30% del ingreso y sugiere hablar con un asesor.
-   NUNCA digas si la deuda es buena o mala. Solo muestra los numeros.
-
-3. Si necesitas datos de transacciones antes de responder:
-   Usa consultar_transacciones con el filtro adecuado.
-
-4. Para gastos o consultas de presupuesto:
-   Usa calcular_balance y compara contra el presupuesto de la categoria.
-   Si un gasto supera el limite de su categoria, genera una alerta clara.
-
-5. Si el usuario pregunta por METAS DE AHORRO o tiempos de ahorro:
-   Usa proyectar_meta_ahorro indicando meta, aporte mensual y si tiene saldo o rendimiento. Muestra los numeros calculados.
-
-6. Si el usuario consulta sobre su FONDO DE EMERGENCIA:
-   Usa calcular_fondo_emergencia basandote en sus gastos mensuales o presupuesto indispensable y los meses de cobertura solicitados.
-
-7. Siempre termina mostrando visibilidad: balance actual, meta de ahorro, observacion util.
-
-RESTRICCIONES:
-- No ejecutes pagos ni transacciones reales.
-- No decidas por el usuario. Muestra la informacion, el decide.
-- Se breve, claro y sin jerga financiera compleja.
-""".strip()
-
+    return SYSTEM_PROMPT.format(
+        ingreso_mensual=perfil["ingreso_mensual"],
+        meta_ahorro_porcentaje=perfil["meta_ahorro_porcentaje"],
+        meta_monto=perfil["ingreso_mensual"] * perfil["meta_ahorro_porcentaje"] / 100,
+        categorias_texto=categorias_texto,
+        memoria=memoria,
+    ).strip()
 
 def responder(
     mensaje_usuario: str,
     perfil: Perfil,
     memoria: str,
 ) -> str:
-    """Genera una respuesta del asistente financiero mediante Gemini.
+    """Genera una respuesta del asistente financiero mediante LangChain."""
+    
+    # 1. Clasificar consulta (Router)
+    start_time = time.time()
+    categoria = clasificar_consulta(mensaje_usuario)
+    registrar_ejecucion("Router Chain", time.time() - start_time)
 
-    Args:
-        mensaje_usuario: Mensaje enviado por el usuario.
-        perfil: Perfil financiero actual del usuario en sesion.
-        memoria: Representacion textual de los mensajes recientes.
+    # 2. Despacho inteligente
+    if categoria == "GENERAL":
+        # Cadena directa sin herramientas pesadas
+        start_time = time.time()
+        respuesta = generar_respuesta_simple(query=mensaje_usuario, categoria=categoria)
+        registrar_ejecucion("Response Chain", time.time() - start_time)
+        return respuesta
 
-    Returns:
-        Respuesta textual generada por Gemini. Si el modelo no devuelve
-        contenido textual, se retorna un mensaje predeterminado.
-    """
+    # Si no es GENERAL, evaluar prioridades e instanciar el agente con herramientas
+    start_time = time.time()
+    
+    # Podriamos obtener prioridades si es una consulta compleja
+    # prioridades = priorizar_situacion(mensaje_usuario)
+    
     contexto = construir_contexto(perfil, memoria)
-
-    response = client.models.generate_content(
+    
+    llm = ChatGoogleGenerativeAI(
         model=GEMINI_MODEL,
-        contents=mensaje_usuario,
-        config=types.GenerateContentConfig(
-            system_instruction=contexto,
-            tools=[
-                consultar_transacciones,
-                calcular_balance,
-                evaluar_deuda,
-                proyectar_meta_ahorro,
-                calcular_fondo_emergencia,
-            ],
-        ),
+        api_key=GEMINI_API_KEY,
+        temperature=0.0
     )
-
-    return response.text or "No fue posible generar una respuesta."
+    
+    # Convertimos a tools de LangChain
+    herramientas = [
+        tool(consultar_transacciones),
+        tool(calcular_balance),
+        tool(evaluar_deuda),
+        tool(proyectar_meta_ahorro),
+        tool(calcular_fondo_emergencia)
+    ]
+    
+    agent_executor = create_agent(llm, herramientas, contexto)
+    
+    try:
+        resultado = agent_executor.invoke({"input": mensaje_usuario})
+        respuesta = resultado["output"]
+    except Exception as e:
+        respuesta = f"Error en la ejecucion del agente: {e}"
+        
+    registrar_ejecucion("Agent Executor", time.time() - start_time)
+    
+    return respuesta
