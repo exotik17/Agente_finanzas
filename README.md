@@ -37,8 +37,6 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Si PowerShell impide activar el entorno por la política de ejecución, puedes usar CMD con el comando anterior o permitir la ejecución de scripts para tu usuario. No es necesario cambiar la política del equipo.
-
 ## Configuración de Gemini
 
 Crea un archivo llamado `.env` en la carpeta principal del proyecto y agrega tu clave:
@@ -48,8 +46,7 @@ GEMINI_API_KEY=pega_aqui_tu_clave
 GEMINI_MODEL=gemini-3.8-flash
 ```
 
-La variable `GEMINI_MODEL` es opcional; si no se incluye, la aplicación usa el modelo predeterminado definido en `config/settings.py`. Si eliges otro modelo, asegúrate de que esté disponible para tu proyecto y tenga cuota. No subas el archivo `.env` a Git ni compartas capturas donde se vea la clave.
-
+La variable `GEMINI_MODEL` es opcional; si no se incluye, la aplicación usa el modelo predeterminado definido en `config/settings.py`.
 ## Ejecución
 
 Con el entorno virtual activado, desde la carpeta del proyecto ejecuta:
@@ -78,11 +75,31 @@ Las Tools deterministas también pueden comprobarse directamente con pruebas aut
 
 ## Errores habituales
 
-- **Falta `GEMINI_API_KEY`:** confirma que `.env` está en la carpeta principal y que la variable tiene una clave válida.
 - **Error `429 RESOURCE_EXHAUSTED`:** se agotó la cuota o el límite de solicitudes del modelo. Revisa la cuota del proyecto, usa un modelo disponible para esa cuenta o vuelve a intentar cuando se renueve el límite.
 - **No se reconoce `streamlit`:** comprueba que el entorno virtual esté activado e instala las dependencias con `pip install -r requirements.txt`.
-- **El puerto ya está ocupado:** inicia Streamlit en otro puerto, por ejemplo `streamlit run app.py --server.port 8502`.
 
 ## Evidencias de validación
 
-Guarda las capturas de la pantalla inicial, una respuesta conceptual, una consulta que use una herramienta, el intercambio de dos turnos y la vista móvil. Si documentas un error y su corrección, conserva una captura de cada estado. Evita incluir claves, tokens u otros datos privados.
+Pantalla inicial :  
+
+ <img width="1918" height="938" alt="image" src="https://github.com/user-attachments/assets/b7745edf-e1ad-450d-aec7-7bd7815f9c20" />
+ 
+Qué es un fondo de emergencia?
+Se evidencia la resolución de pregunta y los detalles de la sesión:
+
+ <img width="1900" height="906" alt="image" src="https://github.com/user-attachments/assets/b828521f-2f30-4222-8052-796d541bbcc2" />
+ 
+ 
+Quiero ahorrar $600000 y puedo guardar $100000 al mes. ¿Cuántos meses tardaré en alcanzar la meta, sin considerar rendimientos?:
+
+
+ <img width="1907" height="903" alt="image" src="https://github.com/user-attachments/assets/2f35869c-e7d4-436d-a931-0e7d8c14cf42" />
+ 
+
+Gano $600000 al mes y quiero ahorrar el 10%. Y luego le pregunté:
+Con el ingreso y la meta que te acabo de decir, ¿cuánto debería separar al mes?, para mirar si el agente guardaba el contexto, y si fue asi:
+
+<img width="1911" height="836" alt="image" src="https://github.com/user-attachments/assets/b7f38108-84a4-4077-ba64-6f0ce26f98a3" />
+
+
+Sin embargo se trabo en la respuesta, dando información en un formato corrupto y repetido, pese a que en la barra lateral se guardó bien.
